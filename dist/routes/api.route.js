@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const stream_controller_1 = require("../controllers/stream.controller");
+const storage_controller_1 = require("../controllers/storage.controller");
+const stream_schema_1 = require("../schemas/stream.schema");
+const router = (0, express_1.Router)();
+router.post('/stream/create', stream_schema_1.validateCreateStream, stream_controller_1.create);
+router.get('/stream/list', stream_controller_1.list);
+router.get('/stream/stop/:id', stream_controller_1.stop);
+router.get('/storage/list', storage_controller_1.storageList);
+router.get('/storage/:name/list/', storage_controller_1.filesList);
+exports.default = router;

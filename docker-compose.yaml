@@ -1,0 +1,9 @@
+services:
+  node-application:
+    build: .
+    container_name: rtmp-streamer
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./storage:/app/storage/
+      - ./logs:/app/logs
