@@ -1,9 +1,12 @@
 services:
   node-application:
-    build: .
-    container_name: rtmp-streamer
+    build:
+        context: .
+        dockerfile: Dockerfile
+    container_name: rtmp-api
     ports:
       - "3000:3000"
     volumes:
       - ./storage:/app/storage/
       - ./logs:/app/logs
+      - ./certs:/app/certs
