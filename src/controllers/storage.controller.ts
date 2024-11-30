@@ -3,7 +3,7 @@ import {config} from "../config/config";
 import multer from "multer";
 import path from "path";
 import fs from 'fs';
-
+import {StreamService} from "./stream.service";
 
 export const storageList = async (req: any, res: any) => {
     const storageService = new StorageService(config.storageDir);
@@ -29,9 +29,11 @@ export const uploadFile = async (req: any, res: any) => {
 
     const dir = req.params.name;
     const uploadDir = path.join(config.storageDir, dir);
+    const tmpDir = path.join(config.tempStorageDir, dir);
 
     if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
+        fs.mkdirSync(tmpDir, { recursive: true });
     }
 
     const storage = multer.diskStorage({
@@ -51,6 +53,10 @@ export const uploadFile = async (req: any, res: any) => {
             return res.status(500).json({message: 'Error uploading file'});
         }
 
+        const streamService = new StreamService();
+        console.log(dir +"/"+ req.file.filename)
+        streamService.convertToFlv(dir +"/"+ req.file.filename);
+
         return res.status(200).json({message: 'File uploaded'});
     });
 }
@@ -58,7 +64,6 @@ export const uploadFile = async (req: any, res: any) => {
 export const deleteFile = async (req: any, res: any) => {
     const dir = req.params.name;
 
-    //decode file name from base64
     const fileName =  Buffer.from(req.params.file, 'base64').toString('ascii');
 
     const filePath = path.join(config.storageDir, dir, fileName);

@@ -1,8 +1,11 @@
 import {StreamService} from './stream.service';
 import {validationResult} from 'express-validator';
 import {Request} from 'express';
-import {config} from "../config/config";
 import logger from "../logger";
+import {converts} from "../app";
+import {existsSync} from 'node:fs';
+import {config} from "../config/config";
+
 
 const workers: Map<string, WorkerInfo> = new Map();
 
@@ -16,36 +19,59 @@ export const create = async (req: Request, res: any) => {
     if (!errors.isEmpty()) {
         return res.status(400).json({errors: errors.array()});
     }
-
     const stream: Stream = req.body;
-    stream.videoPath = config.storageDir + stream.videoPath;
-    const streamService = new StreamService();
+    const convert = converts.get(stream.videoPath);
 
-    try {
-        const ffmpeg = await streamService.create(stream);
-        workers.set(stream.name, {ffmpeg: ffmpeg, status: 'running'});
+    if (convert?.status != 'in_progress' && existsSync(config.tempStorageDir + stream.videoPath)) {
+        const streamService = new StreamService();
 
+        try {
+            const ffmpeg = await streamService.startRtmpStream(stream.videoPath, stream.rtmpTarget);
+            workers.set(stream.name, {ffmpeg: ffmpeg, status: 'running'});
+
+            return res.status(200).json({
+                message: 'Stream created',
+                stream: stream,
+            });
+
+        } catch (error) {
+            logger.error('Error creating stream:', error);
+            return res.status(500).json({message: 'Error creating stream', error: (error as Error).message});
+        }
+    } else {
         return res.status(200).json({
-            message: 'Stream created',
-            stream: stream,
+            message: 'File not prepared for stream yet, wait until converting will finish...',
         });
-
-    } catch (error) {
-        logger.error('Error creating stream:', error);
-        return res.status(500).json({message: 'Error creating stream', error: (error as Error).message});
     }
-
 };
 
+export const checkSource = (req: Request, res: any) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({errors: errors.array()});
+    }
+    const stream: Stream = req.body;
+    const convert = converts.get(stream.videoPath);
+
+    if (existsSync(config.tempStorageDir + stream.videoPath)) {
+        return res.status(200).json({message: 'File is ready for streaming'});
+    } else {
+        if (convert?.status == 'in_progress') {
+            return res.status(200).json({message: 'File is in_progress',});
+        } else {
+            return res.status(400).json({message: 'File not found',});
+        }
+    }
+};
 
 export const list = (req: any, res: any) => {
 
     const activeProcesses =
         Array.from(workers.entries()).map(([name, worker]) => (
             {
-            name,
-            spawnargs: worker.ffmpeg.ffmpegProc.spawnargs,
-            status: worker.status,
+                name,
+                spawnargs: worker.ffmpeg.ffmpegProc.spawnargs,
+                status: worker.status,
             }
 
         ));

@@ -4,6 +4,9 @@ import fs from 'fs';
 import ApiRoutes from './routes/api.route';
 import expressListRoutes from 'express-list-routes';
 import cors, { CorsOptions } from 'cors';
+import {ConvertInfo} from "./models/Converts";
+
+export const  converts: Map<string, ConvertInfo> = new Map();
 
 // CORS настройки
 const corsOptions: CorsOptions = {
@@ -21,8 +24,8 @@ app.use('/api/', ApiRoutes);
 
 // Путь к сертификатам
 const sslOptions = {
-    key: fs.readFileSync('/app/certs/privkey.pem', 'utf8'),
-    cert: fs.readFileSync('/app/certs/fullchain.pem', 'utf8'),
+    key: fs.readFileSync('./certs/privkey.pem', 'utf8'),
+    cert: fs.readFileSync('./certs/fullchain.pem', 'utf8'),
 };
 
 // Порт для HTTPS

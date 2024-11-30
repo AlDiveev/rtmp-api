@@ -1,38 +1,55 @@
-import Ffmpeg from "fluent-ffmpeg";
+import Ffmpeg, {FfmpegCommand} from "fluent-ffmpeg";
 import logger from "../logger";
+import {config} from "../config/config";
+import { converts } from "../app";
+
 
 export class StreamService {
 
+    public async startRtmpStream(fileName: string, rtmpTarget: string): Promise<void> {
 
-    public async create(stream: Stream): Promise<void> {
-        return Ffmpeg({source: stream.videoPath, timeout: 0})
-            .inputOption('-stream_loop', '-1')
-            .inputOption('-re')
-            .addOption('-pix_fmt', 'yuvj420p')
-            .addOption('-b:v', '6800k')
-            .addOption('-minrate', '6800k')
-            .addOption('-maxrate', '6800k')
-            .addOption('-bufsize', '13600k')
-            .addOption('-b:a', '320k')
-            .addOption('-ar', '44100')
-            .addOption('-vcodec', 'libx264')
-            .addOption('-acodec', 'aac')
-            .addOption('-preset', 'medium')
-            .addOption('-r', '30')
-            .addOption('-g', '120')
-            .addOption('-tune', 'zerolatency')
-            .addOption('-threads', '4')
-            .addOption('-f', 'flv')
-            .addOption('-reconnect', '1')
-            .addOption('-reconnect_streamed', '1')
-            .addOption('-reconnect_delay_max', '5')
-            .output(stream.rtmpTarget)
-            .on('start', function(commandLine) {
+        return Ffmpeg({source: config.tempStorageDir + fileName, timeout: 0})
+            .inputOptions('-re')
+            .inputOptions('-stream_loop', '-1')
+            .outputOptions('-c copy')
+            .format('flv')
+            .output(rtmpTarget)
+            .on('start', function (commandLine) {
                 logger.info('Spawned Ffmpeg with command: ' + commandLine);
             })
-            .on('error', function(err) {
-                logger.error('An error occurred: ' + err.message);
+            .on('error', function (err) {
+                logger.error('Stream start error: ' + err.message);
             })
             .run();
+    }
+
+    public async convertToFlv(fileName: string): Promise<FfmpegCommand> {
+
+        converts.set(fileName, { name: fileName, status: 'in_progress' });
+
+        return Ffmpeg(config.storageDir + fileName)
+            .videoCodec('libx264')
+            .videoBitrate(1500)
+            .outputOptions([
+                '-maxrate 1500k',
+                '-bufsize 3000k',
+                '-vf scale=1280:720',
+                '-r 25'
+            ])
+            .audioCodec('aac')
+            .audioBitrate('96k')
+            .audioFrequency(44100)
+            .format('flv')
+            .on('start', function (commandLine) {
+                logger.info('Spawned Ffmpeg convert: ' + commandLine);
+            })
+            .on('error', function (err) {
+                logger.error('Convert error: ' + err.message);
+            })
+            .on('end', function () {
+                converts.delete(fileName);
+                logger.info('Convert successfully finished!');
+            })
+            .save(config.tempStorageDir + fileName);
     }
 }

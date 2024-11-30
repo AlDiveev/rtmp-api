@@ -1,4 +1,5 @@
 
 export const config = {
-    storageDir: '/app/storage/'
+    storageDir: './storage/',
+    tempStorageDir: './storage/flv/'
 }
