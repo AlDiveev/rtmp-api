@@ -23,11 +23,15 @@ export class StreamService {
             .run();
     }
 
-    public async convertToFlv(fileName: string): Promise<FfmpegCommand> {
+    public async convertToFlv(file: any, session: string ): Promise<FfmpegCommand> {
 
-        converts.set(fileName, { name: fileName, status: 'in_progress' });
 
-        return Ffmpeg(config.storageDir + fileName)
+        converts.set(file.filename, { name: file.filename, status: 'in_progress' });
+        const resultPath = config.tempStorageDir + session+"/"+file.filename.replace(".mp4", '')+ ".flv"
+
+        console.log(converts);
+
+        return Ffmpeg(config.storageDir +session+"/"+ file.filename)
             .videoCodec('libx264')
             .videoBitrate(1500)
             .outputOptions([
@@ -47,9 +51,11 @@ export class StreamService {
                 logger.error('Convert error: ' + err.message);
             })
             .on('end', function () {
-                converts.delete(fileName);
+                converts.delete(file.filename);
+
+                console.log(converts);
                 logger.info('Convert successfully finished!');
             })
-            .save(config.tempStorageDir + fileName);
+            .save(resultPath);
     }
 }

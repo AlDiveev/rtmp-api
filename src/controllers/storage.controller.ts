@@ -54,10 +54,10 @@ export const uploadFile = async (req: any, res: any) => {
         }
 
         const streamService = new StreamService();
-        console.log(dir +"/"+ req.file.filename)
-        streamService.convertToFlv(dir +"/"+ req.file.filename);
 
-        return res.status(200).json({message: 'File uploaded'});
+        streamService.convertToFlv(req.file, dir);
+
+        return res.status(200).json({message: 'File uploaded, covert to flv started'});
     });
 }
 

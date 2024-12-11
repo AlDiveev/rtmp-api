@@ -16,32 +16,26 @@ interface WorkerInfo {
 
 export const create = async (req: Request, res: any) => {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
         return res.status(400).json({errors: errors.array()});
     }
+
     const stream: Stream = req.body;
-    const convert = converts.get(stream.videoPath);
+    const streamService = new StreamService();
 
-    if (convert?.status != 'in_progress' && existsSync(config.tempStorageDir + stream.videoPath)) {
-        const streamService = new StreamService();
+    try {
+        const ffmpeg = await streamService.startRtmpStream(stream.videoPath, stream.rtmpTarget);
+        workers.set(stream.name, {ffmpeg: ffmpeg, status: 'running'});
 
-        try {
-            const ffmpeg = await streamService.startRtmpStream(stream.videoPath, stream.rtmpTarget);
-            workers.set(stream.name, {ffmpeg: ffmpeg, status: 'running'});
-
-            return res.status(200).json({
-                message: 'Stream created',
-                stream: stream,
-            });
-
-        } catch (error) {
-            logger.error('Error creating stream:', error);
-            return res.status(500).json({message: 'Error creating stream', error: (error as Error).message});
-        }
-    } else {
         return res.status(200).json({
-            message: 'File not prepared for stream yet, wait until converting will finish...',
+            message: 'Stream created',
+            stream: stream,
         });
+
+    } catch (error) {
+        logger.error('Error creating stream:', error);
+        return res.status(500).json({message: 'Error creating stream', error: (error as Error).message});
     }
 };
 
@@ -50,17 +44,19 @@ export const checkSource = (req: Request, res: any) => {
     if (!errors.isEmpty()) {
         return res.status(400).json({errors: errors.array()});
     }
-    const stream: Stream = req.body;
-    const convert = converts.get(stream.videoPath);
+    const video: any = req.body;
+    const convert = converts.get(video.videoName);
 
-    if (existsSync(config.tempStorageDir + stream.videoPath)) {
-        return res.status(200).json({message: 'File is ready for streaming'});
+    const flvFilePath = config.tempStorageDir + video.session + "/" + video.videoName.replace(".mp4", '') + ".flv";
+
+    if (convert?.status == 'in_progress') {
+        return res.status(200).json({message: 'File is in_progress',});
     } else {
-        if (convert?.status == 'in_progress') {
-            return res.status(200).json({message: 'File is in_progress',});
-        } else {
-            return res.status(400).json({message: 'File not found',});
+        if (existsSync(flvFilePath)) {
+            return res.status(200).json({message: 'File is ready for streaming'});
         }
+
+        return res.status(400).json({message: 'File not found',});
     }
 };
 

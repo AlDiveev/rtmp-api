@@ -2,11 +2,12 @@ import {Router} from 'express';
 import {checkSource, create, list, stop} from '../controllers/stream.controller';
 import {storageList, filesList, uploadFile, deleteFile} from '../controllers/storage.controller';
 import {validateCreateStream} from '../schemas/stream.schema';
+import {validateCheckVideo} from "../schemas/check.video.schema";
 
 const router = Router();
 
 router.post('/stream/create', validateCreateStream, create);
-router.post('/stream/check-source', validateCreateStream, checkSource);
+router.post('/stream/check-source', validateCheckVideo, checkSource);
 router.get('/stream/list', list);
 router.get('/stream/stop/:id', stop);
 
