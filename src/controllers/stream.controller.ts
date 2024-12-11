@@ -66,7 +66,7 @@ export const list = (req: any, res: any) => {
         Array.from(workers.entries()).map(([name, worker]) => (
             {
                 name,
-                spawnargs: worker.ffmpeg.ffmpegProc.spawnargs,
+                ffmpeg: worker.ffmpeg.ffmpegProc.spawnargs,
                 status: worker.status,
             }
 
